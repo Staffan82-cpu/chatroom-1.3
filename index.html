@@ -5,16 +5,113 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Chat Assistant</title>
     <style>
-        body { font-family: Arial, sans-serif; background: #f5f5f5; text-align: center; }
-        .chat-container { width: 90%; max-width: 400px; margin: 20px auto; background: #fff; padding: 10px; border-radius: 10px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
-        .chatbox { height: 400px; overflow-y: auto; padding: 10px; border-bottom: 1px solid #ddd; }
-        .message { padding: 8px; margin: 5px 0; border-radius: 5px; max-width: 80%; }
-        .user { background: #007bff; color: white; text-align: right; margin-left: auto; }
-        .bot { background: #e0e0e0; color: black; text-align: left; margin-right: auto; }
-        .input-container { display: flex; padding: 10px; }
-        input { flex: 1; padding: 10px; border: 1px solid #ccc; border-radius: 5px; }
-        button { background: #007bff; color: white; border: none; padding: 10px; border-radius: 5px; margin-left: 5px; cursor: pointer; }
-        button:hover { background: #0056b3; }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        body { 
+            font-family: 'Poppins', sans-serif; 
+            background: linear-gradient(135deg, #667eea, #764ba2); 
+            display: flex; 
+            justify-content: center; 
+            align-items: center; 
+            height: 100vh; 
+            margin: 0;
+        }
+
+        .chat-container {
+            width: 90%; max-width: 400px;
+            background: rgba(255, 255, 255, 0.2);
+            padding: 15px; border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+            backdrop-filter: blur(10px);
+            text-align: center;
+            color: white;
+        }
+
+        .chatbox {
+            height: 400px;
+            overflow-y: auto;
+            padding: 10px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.3);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .message {
+            padding: 12px; margin: 5px 0;
+            border-radius: 10px; max-width: 80%;
+            animation: fadeIn 0.3s ease-in-out;
+            display: inline-block;
+        }
+
+        .user {
+            background: #007bff;
+            color: white;
+            text-align: right;
+            align-self: flex-end;
+        }
+
+        .bot {
+            background: rgba(255, 255, 255, 0.3);
+            color: black;
+            text-align: left;
+            align-self: flex-start;
+        }
+
+        .options button {
+            margin: 5px;
+            padding: 10px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            transition: all 0.3s ease-in-out;
+        }
+
+        .options button:hover {
+            background: rgba(255, 255, 255, 0.4);
+        }
+
+        .input-container {
+            display: flex;
+            padding: 10px;
+        }
+
+        input {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.3);
+            color: white;
+            font-size: 16px;
+            outline: none;
+        }
+
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 12px;
+            border-radius: 8px;
+            margin-left: 5px;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+
+        button:hover {
+            background: #0056b3;
+        }
+
+        .typing {
+            font-size: 14px;
+            opacity: 0.7;
+            font-style: italic;
+            animation: fadeIn 0.3s ease-in-out infinite alternate;
+        }
     </style>
 </head>
 <body>
@@ -34,24 +131,54 @@
             }
         }
 
-        function sendMessage() {
+        function sendMessage(message = null) {
             let input = document.getElementById("userInput");
-            let message = input.value.trim();
-            if (message !== "") {
-                let chatbox = document.getElementById("chatbox");
-                chatbox.innerHTML += `<div class='message user'>${message}</div>`;
+            let chatbox = document.getElementById("chatbox");
+            let userMessage = message || input.value.trim();
+
+            if (userMessage !== "") {
+                let userMsgDiv = document.createElement("div");
+                userMsgDiv.classList.add("message", "user");
+                userMsgDiv.innerText = userMessage;
+                chatbox.appendChild(userMsgDiv);
+
                 input.value = "";
 
-                fetch("/chat", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ message: message })
-                })
-                .then(response => response.json())
-                .then(data => {
-                    chatbox.innerHTML += `<div class='message bot'>${data.response}</div>`;
-                    chatbox.scrollTop = chatbox.scrollHeight;
-                });
+                let typingIndicator = document.createElement("div");
+                typingIndicator.classList.add("typing");
+                typingIndicator.innerText = "Typing...";
+                chatbox.appendChild(typingIndicator);
+
+                chatbox.scrollTop = chatbox.scrollHeight;
+
+                setTimeout(() => {
+                    chatbox.removeChild(typingIndicator);
+                    fetch("/chat", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ message: userMessage })
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        let botMsgDiv = document.createElement("div");
+                        botMsgDiv.classList.add("message", "bot");
+                        botMsgDiv.innerText = data.response;
+                        chatbox.appendChild(botMsgDiv);
+
+                        if (data.options) {
+                            let optionsDiv = document.createElement("div");
+                            optionsDiv.className = "options";
+                            data.options.forEach(option => {
+                                let button = document.createElement("button");
+                                button.innerText = option;
+                                button.onclick = () => sendMessage(option);
+                                optionsDiv.appendChild(button);
+                            });
+                            chatbox.appendChild(optionsDiv);
+                        }
+                        chatbox.scrollTop = chatbox.scrollHeight;
+                    });
+                }, 1000); // Simulated typing delay
             }
         }
     </script>

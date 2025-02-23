@@ -10,4 +10,4 @@ def index():
 def chat():
     user_message = request.json["message"]
     bot_response = chatbot_response(user_message)
-    return jsonify({"response": bot_response})
+    return jsonify(bot_response)
